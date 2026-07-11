@@ -24,6 +24,23 @@ jobs:
           path: buildtree
           submodules: recursive
 
+      - name: Show OpenCPN API libraries
+        shell: pwsh
+        working-directory: buildtree
+        run: |
+          Write-Host "Contents of opencpn-libs\api-18:"
+          Get-ChildItem "opencpn-libs\api-18" -Recurse |
+            Where-Object {
+              $_.PSIsContainer -or
+              $_.Name -match "opencpn\.lib|ocpn_plugin\.h"
+            } |
+            Select-Object FullName
+
+          Write-Host ""
+          Write-Host "All OpenCPN LIB files:"
+          Get-ChildItem "opencpn-libs" -Recurse -Filter "opencpn.lib" |
+            Select-Object FullName, Length
+
       - name: Overlay Voyage ETA source
         shell: pwsh
         run: |
