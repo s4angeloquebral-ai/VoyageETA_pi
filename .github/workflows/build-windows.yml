@@ -27,7 +27,6 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item voyage_eta_src\src\* buildtree\src\ -Force
-          Copy-Item voyage_eta_src\CMakeLists.txt buildtree\CMakeLists.txt -Force
           Copy-Item voyage_eta_src\README.md buildtree\README.md -Force
           Copy-Item voyage_eta_src\LICENSE buildtree\LICENSE -Force
 
