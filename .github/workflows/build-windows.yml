@@ -30,12 +30,24 @@ jobs:
           Copy-Item voyage_eta_src\README.md buildtree\README.md -Force
           Copy-Item voyage_eta_src\LICENSE buildtree\LICENSE -Force
 
-      - name: Install build tools
+        - name: Install build tools
         shell: pwsh
         run: |
           choco install cmake ninja visualstudio2022buildtools `
-            visualstudio2022-workload-vctools -y --no-progress
+            visualstudio2022-workload-vctools gettext -y --no-progress
 
+          $gettextBin = Get-ChildItem "C:\ProgramData\chocolatey" `
+            -Recurse -Filter "msgfmt.exe" `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1 |
+            ForEach-Object { $_.Directory.FullName }
+
+          if (-not $gettextBin) {
+            throw "msgfmt.exe was not found after installing Gettext."
+          }
+
+          Write-Host "Gettext folder: $gettextBin"
+          Add-Content $env:GITHUB_PATH $gettextBin
       - name: Prepare dependencies
         shell: pwsh
         working-directory: buildtree
@@ -65,6 +77,10 @@ jobs:
         shell: pwsh
         working-directory: buildtree
         run: |
+        
+          $wxRo Write-Host "Checking Gettext tools:"
+          where.exe msgfmt
+          where.exe msgmerge
           $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
           $wxLib = "$wxRoot\lib\vc14x_x64_dll"
 
