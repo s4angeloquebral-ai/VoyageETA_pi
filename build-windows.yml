@@ -1,0 +1,74 @@
+name: Build Voyage ETA for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout Voyage ETA
+        uses: actions/checkout@v4
+        with:
+          path: voyage_eta_src
+
+      - name: Checkout OpenCPN testplugin template
+        uses: actions/checkout@v4
+        with:
+          repository: jongough/testplugin_pi
+          path: buildtree
+          submodules: recursive
+
+      - name: Overlay Voyage ETA source
+        shell: pwsh
+        run: |
+          Copy-Item voyage_eta_src\src\* buildtree\src\ -Force
+          Copy-Item voyage_eta_src\CMakeLists.txt buildtree\CMakeLists.txt -Force
+          Copy-Item voyage_eta_src\README.md buildtree\README.md -Force
+          Copy-Item voyage_eta_src\LICENSE buildtree\LICENSE -Force
+
+      - name: Install build tools
+        shell: pwsh
+        run: |
+          choco install cmake ninja visualstudio2022buildtools `
+            visualstudio2022-workload-vctools -y --no-progress
+
+      - name: Prepare dependencies
+        shell: cmd
+        working-directory: buildtree
+        run: |
+          if exist win_deps.bat call win_deps.bat
+          if exist msvc\win_deps.bat call msvc\win_deps.bat
+
+      - name: Configure
+        shell: pwsh
+        working-directory: buildtree
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: pwsh
+        working-directory: buildtree
+        run: |
+          cmake --build build --config Release --parallel 2
+
+      - name: Package
+        shell: pwsh
+        working-directory: buildtree
+        run: |
+          cmake --build build --config Release --target package
+          Get-ChildItem -Recurse build | Where-Object {
+            $_.Name -match '\.(tar\.gz|zip|dll)$'
+          } | ForEach-Object {
+            Copy-Item $_.FullName "$env:GITHUB_WORKSPACE\artifacts\" -Force
+          }
+
+      - name: Upload plugin files
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoyageETA-Windows-x64
+          path: artifacts
