@@ -31,20 +31,26 @@ jobs:
           Copy-Item "voyage_eta_src\README.md" "buildtree\README.md" -Force
           Copy-Item "voyage_eta_src\LICENSE" "buildtree\LICENSE" -Force
 
-      - name: Install build tools
+            - name: Install build tools
         shell: pwsh
         run: |
           choco install cmake ninja gettext wget 7zip -y --no-progress
 
-          $gettextBin = Get-ChildItem "C:\ProgramData\chocolatey" -Recurse -Filter "msgfmt.exe" -ErrorAction SilentlyContinue |
-            Select-Object -First 1 |
-            ForEach-Object { $_.Directory.FullName }
+          $gettextExe = Get-ChildItem "C:\Program Files\gettext-iconv" `
+            -Recurse `
+            -Filter "msgfmt.exe" `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
 
-          if (-not $gettextBin) {
-            throw "msgfmt.exe was not found after installing Gettext."
+          if (-not $gettextExe) {
+            throw "msgfmt.exe was not found under C:\Program Files\gettext-iconv"
           }
 
-          Write-Host "Gettext folder: $gettextBin"
+          $gettextBin = $gettextExe.Directory.FullName
+
+          Write-Host "Gettext folder found:"
+          Write-Host $gettextBin
+
           Add-Content -Path $env:GITHUB_PATH -Value $gettextBin
 
       - name: Prepare x64 wxWidgets
