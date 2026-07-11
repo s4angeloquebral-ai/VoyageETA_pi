@@ -43,11 +43,40 @@ jobs:
           call msvc\win_deps.bat wx32
 
       - name: Configure
-        shell: cmd
+        shell: pwsh
         working-directory: buildtree
         run: |
-          if not exist build mkdir build
-          cmake -S . -B build -A x64 -DOCPN_TARGET=MSVC -DwxWidgets_ROOT_DIR="%CD%\cache\wxWidgets-3.2.1" -DwxWidgets_LIB_DIR="%CD%\cache\wxWidgets-3.2.1\lib\vc14x_x64_dll" -DwxWidgets_CONFIGURATION=mswu
+          $wxRoot = (Resolve-Path "cache\wxWidgets-3.2.1").Path
+
+          Write-Host "wxWidgets root:"
+          Write-Host $wxRoot
+
+          Write-Host "Available wxWidgets library folders:"
+          Get-ChildItem "$wxRoot\lib" -Directory | ForEach-Object {
+            Write-Host $_.FullName
+          }
+
+          $wxLib = Get-ChildItem "$wxRoot\lib" -Directory |
+            Where-Object {
+              $_.Name -match "x64" -and $_.Name -match "dll"
+            } |
+            Select-Object -First 1
+
+          if (-not $wxLib) {
+            throw "No x64 wxWidgets DLL library folder was found."
+          }
+
+          Write-Host "Using wxWidgets library folder:"
+          Write-Host $wxLib.FullName
+
+          New-Item -ItemType Directory -Force build | Out-Null
+
+          cmake -S . -B build -A x64 `
+            -DOCPN_TARGET=MSVC `
+            "-DwxWidgets_ROOT_DIR=$wxRoot" `
+            "-DwxWidgets_LIB_DIR=$($wxLib.FullName)" `
+            -DwxWidgets_CONFIGURATION=mswu `
+            -DwxWidgets_USE_STATIC=OFF
       - name: Build
         shell: pwsh
         working-directory: buildtree
