@@ -1,0 +1,20 @@
+VOYAGE ETA PLUGIN - BUILD AND INSTALL
+
+This package is the complete plugin source.
+
+To obtain the Windows x64 importable package:
+
+1. Create a free GitHub repository.
+2. Upload the contents of this folder.
+3. Click Actions.
+4. Choose "Build Voyage ETA for Windows".
+5. Click "Run workflow".
+6. When finished, download "VoyageETA-Windows-x64".
+7. Extract it and look for the generated .tar.gz package.
+8. Open OpenCPN:
+   Options > Plugins > Import Plugin...
+9. Select the .tar.gz package.
+10. Enable "Voyage ETA".
+
+The plugin reads own-ship SOG and position from OpenCPN's live navigation feed.
+It lists route waypoints and calculates ETA to the selected waypoint.
