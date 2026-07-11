@@ -24,23 +24,6 @@ jobs:
           path: buildtree
           submodules: recursive
 
-      - name: Show OpenCPN API libraries
-        shell: pwsh
-        working-directory: buildtree
-        run: |
-          Write-Host "Contents of opencpn-libs\api-18:"
-          Get-ChildItem "opencpn-libs\api-18" -Recurse |
-            Where-Object {
-              $_.PSIsContainer -or
-              $_.Name -match "opencpn\.lib|ocpn_plugin\.h"
-            } |
-            Select-Object FullName
-
-          Write-Host ""
-          Write-Host "All OpenCPN LIB files:"
-          Get-ChildItem "opencpn-libs" -Recurse -Filter "opencpn.lib" |
-            Select-Object FullName, Length
-
       - name: Overlay Voyage ETA source
         shell: pwsh
         run: |
@@ -60,17 +43,14 @@ jobs:
             Select-Object -First 1
 
           if (-not $gettextExe) {
-            throw "msgfmt.exe was not found under C:\Program Files\gettext-iconv"
+            throw "msgfmt.exe was not found."
           }
 
           $gettextBin = $gettextExe.Directory.FullName
-
-          Write-Host "Gettext folder found:"
-          Write-Host $gettextBin
-
+          Write-Host "Gettext folder: $gettextBin"
           Add-Content -Path $env:GITHUB_PATH -Value $gettextBin
 
-      - name: Prepare x64 wxWidgets
+      - name: Prepare Win32 wxWidgets
         shell: pwsh
         working-directory: buildtree
         run: |
@@ -81,14 +61,14 @@ jobs:
           $baseUrl = "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.1"
 
           wget -nv --no-check-certificate `
-            "$baseUrl/wxMSW-3.2.1_vc14x_x64_Dev.7z" `
-            -O wx-x64.7z
+            "$baseUrl/wxMSW-3.2.1_vc14x_Dev.7z" `
+            -O wx-win32.7z
 
           wget -nv --no-check-certificate `
             "$baseUrl/wxWidgets-3.2.1-headers.7z" `
             -O wx-headers.7z
 
-          7z x wx-x64.7z "-o$wxRoot" -y
+          7z x wx-win32.7z "-o$wxRoot" -y
           7z x wx-headers.7z "-o$wxRoot" -y
 
           Write-Host "wxWidgets library folders:"
@@ -98,24 +78,20 @@ jobs:
         shell: pwsh
         working-directory: buildtree
         run: |
-          Write-Host "Checking Gettext tools:"
+          Write-Host "Checking Gettext:"
           where.exe msgfmt
           where.exe msgmerge
 
           $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
-          $wxLib = "$wxRoot\lib\vc14x_x64_dll"
-
-          if (-not (Test-Path $wxRoot)) {
-            throw "wxWidgets root folder is missing: $wxRoot"
-          }
+          $wxLib = "$wxRoot\lib\vc14x_dll"
 
           if (-not (Test-Path $wxLib)) {
-            throw "wxWidgets x64 library folder is missing: $wxLib"
+            throw "Win32 wxWidgets library folder is missing: $wxLib"
           }
 
           New-Item -ItemType Directory -Force build | Out-Null
 
-          cmake -S . -B build -A x64 `
+          cmake -S . -B build -A Win32 `
             -DOCPN_TARGET=MSVC `
             "-DwxWidgets_ROOT_DIR=$wxRoot" `
             "-DwxWidgets_LIB_DIR=$wxLib" `
@@ -154,5 +130,5 @@ jobs:
       - name: Upload plugin files
         uses: actions/upload-artifact@v4
         with:
-          name: VoyageETA-Windows-x64
+          name: VoyageETA-Windows
           path: artifacts
