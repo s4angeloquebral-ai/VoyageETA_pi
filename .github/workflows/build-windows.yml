@@ -31,7 +31,7 @@ jobs:
           Copy-Item "voyage_eta_src\README.md" "buildtree\README.md" -Force
           Copy-Item "voyage_eta_src\LICENSE" "buildtree\LICENSE" -Force
 
-            - name: Install build tools
+      - name: Install build tools
         shell: pwsh
         run: |
           choco install cmake ninja gettext wget 7zip -y --no-progress
@@ -58,12 +58,18 @@ jobs:
         working-directory: buildtree
         run: |
           $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
+
           New-Item -ItemType Directory -Force $wxRoot | Out-Null
 
           $baseUrl = "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.1"
 
-          wget -nv --no-check-certificate "$baseUrl/wxMSW-3.2.1_vc14x_x64_Dev.7z" -O wx-x64.7z
-          wget -nv --no-check-certificate "$baseUrl/wxWidgets-3.2.1-headers.7z" -O wx-headers.7z
+          wget -nv --no-check-certificate `
+            "$baseUrl/wxMSW-3.2.1_vc14x_x64_Dev.7z" `
+            -O wx-x64.7z
+
+          wget -nv --no-check-certificate `
+            "$baseUrl/wxWidgets-3.2.1-headers.7z" `
+            -O wx-headers.7z
 
           7z x wx-x64.7z "-o$wxRoot" -y
           7z x wx-headers.7z "-o$wxRoot" -y
