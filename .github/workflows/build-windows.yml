@@ -1,10 +1,11 @@
-
 name: Build Voyage ETA for Windows
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
 
 jobs:
   build:
@@ -26,19 +27,16 @@ jobs:
       - name: Overlay Voyage ETA source
         shell: pwsh
         run: |
-          Copy-Item voyage_eta_src\src\* buildtree\src\ -Force
-          Copy-Item voyage_eta_src\README.md buildtree\README.md -Force
-          Copy-Item voyage_eta_src\LICENSE buildtree\LICENSE -Force
+          Copy-Item "voyage_eta_src\src\*" "buildtree\src\" -Force
+          Copy-Item "voyage_eta_src\README.md" "buildtree\README.md" -Force
+          Copy-Item "voyage_eta_src\LICENSE" "buildtree\LICENSE" -Force
 
-        - name: Install build tools
+      - name: Install build tools
         shell: pwsh
         run: |
-          choco install cmake ninja visualstudio2022buildtools `
-            visualstudio2022-workload-vctools gettext -y --no-progress
+          choco install cmake ninja gettext wget 7zip -y --no-progress
 
-          $gettextBin = Get-ChildItem "C:\ProgramData\chocolatey" `
-            -Recurse -Filter "msgfmt.exe" `
-            -ErrorAction SilentlyContinue |
+          $gettextBin = Get-ChildItem "C:\ProgramData\chocolatey" -Recurse -Filter "msgfmt.exe" -ErrorAction SilentlyContinue |
             Select-Object -First 1 |
             ForEach-Object { $_.Directory.FullName }
 
@@ -47,40 +45,34 @@ jobs:
           }
 
           Write-Host "Gettext folder: $gettextBin"
-          Add-Content $env:GITHUB_PATH $gettextBin
-      - name: Prepare dependencies
+          Add-Content -Path $env:GITHUB_PATH -Value $gettextBin
+
+      - name: Prepare x64 wxWidgets
         shell: pwsh
         working-directory: buildtree
         run: |
-          choco install wget 7zip -y --no-progress
-
           $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
           New-Item -ItemType Directory -Force $wxRoot | Out-Null
 
           $baseUrl = "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.1"
 
-          wget -nv --no-check-certificate `
-            "$baseUrl/wxMSW-3.2.1_vc14x_x64_Dev.7z" `
-            -O wx-x64.7z
-
-          wget -nv --no-check-certificate `
-            "$baseUrl/wxWidgets-3.2.1-headers.7z" `
-            -O wx-headers.7z
+          wget -nv --no-check-certificate "$baseUrl/wxMSW-3.2.1_vc14x_x64_Dev.7z" -O wx-x64.7z
+          wget -nv --no-check-certificate "$baseUrl/wxWidgets-3.2.1-headers.7z" -O wx-headers.7z
 
           7z x wx-x64.7z "-o$wxRoot" -y
           7z x wx-headers.7z "-o$wxRoot" -y
 
-          Write-Host "wxWidgets folders:"
+          Write-Host "wxWidgets library folders:"
           Get-ChildItem "$wxRoot\lib" -Directory
 
       - name: Configure
         shell: pwsh
         working-directory: buildtree
         run: |
-        
-          $wxRo Write-Host "Checking Gettext tools:"
+          Write-Host "Checking Gettext tools:"
           where.exe msgfmt
           where.exe msgmerge
+
           $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
           $wxLib = "$wxRoot\lib\vc14x_x64_dll"
 
@@ -89,8 +81,6 @@ jobs:
           }
 
           if (-not (Test-Path $wxLib)) {
-            Write-Host "Folders found under wxWidgets lib:"
-            Get-ChildItem "$wxRoot\lib" -Directory
             throw "wxWidgets x64 library folder is missing: $wxLib"
           }
 
@@ -101,7 +91,9 @@ jobs:
             "-DwxWidgets_ROOT_DIR=$wxRoot" `
             "-DwxWidgets_LIB_DIR=$wxLib" `
             -DwxWidgets_CONFIGURATION=mswu `
-            -DwxWidgets_USE_STATIC=OFF
+            -DwxWidgets_USE_STATIC=OFF `
+            -DCMAKE_BUILD_TYPE=Release
+
       - name: Build
         shell: pwsh
         working-directory: buildtree
@@ -113,11 +105,22 @@ jobs:
         working-directory: buildtree
         run: |
           cmake --build build --config Release --target package
-          Get-ChildItem -Recurse build | Where-Object {
-            $_.Name -match '\.(tar\.gz|zip|dll)$'
-          } | ForEach-Object {
-            Copy-Item $_.FullName "$env:GITHUB_WORKSPACE\artifacts\" -Force
-          }
+
+      - name: Collect plugin files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+
+          Get-ChildItem "buildtree\build" -Recurse |
+            Where-Object {
+              $_.Name -match "\.(tar\.gz|zip|dll)$"
+            } |
+            ForEach-Object {
+              Copy-Item $_.FullName "artifacts\" -Force
+            }
+
+          Write-Host "Collected files:"
+          Get-ChildItem artifacts
 
       - name: Upload plugin files
         uses: actions/upload-artifact@v4
