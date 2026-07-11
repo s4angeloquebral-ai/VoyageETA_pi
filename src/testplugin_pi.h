@@ -40,7 +40,7 @@ public:
     int GetToolbarToolCount() override { return 1; }
 
     void OnToolbarToolCallback(int id) override;
-    void SetPositionFixEx(PlugIn_Position_Fix_Ex& pfix) override;
+    void SetPositionFix(PlugIn_Position_Fix& pfix) override;
 
     bool HasFix() const { return m_hasFix; }
     double Latitude() const { return m_lat; }

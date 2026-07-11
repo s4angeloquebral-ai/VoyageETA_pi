@@ -68,7 +68,7 @@ int testplugin_pi::Init() {
 
     return WANTS_TOOLBAR_CALLBACK |
            INSTALLS_TOOLBAR_TOOL |
-           WANTS_POSITION_FIX_EX;
+           WANTS_POSITION_FIX;
 }
 
 bool testplugin_pi::DeInit() {
@@ -94,7 +94,7 @@ void testplugin_pi::OnToolbarToolCallback(int) {
     m_dialog->RefreshValues();
 }
 
-void testplugin_pi::SetPositionFixEx(PlugIn_Position_Fix_Ex& pfix) {
+void testplugin_pi::SetPositionFix(PlugIn_Position_Fix& pfix) {
     m_lat = pfix.Lat;
     m_lon = pfix.Lon;
     m_sog = pfix.Sog;
@@ -218,15 +218,15 @@ void VoyageEtaDialog::ReloadRoutes() {
     m_routeGuids.Clear();
     m_points.clear();
 
-    wxArrayString* guids = GetRouteGUIDArray();
+    wxArrayString guids = GetRouteGUIDArray();
 
-    if (!guids || guids->IsEmpty()) {
+    if (guids.IsEmpty()) {
         m_status->SetLabel("No OpenCPN routes found.");
         return;
     }
 
-    for (size_t i = 0; i < guids->GetCount(); ++i) {
-        const wxString guid = guids->Item(i);
+    for (size_t i = 0; i < guids.GetCount(); ++i) {
+        const wxString guid = guids.Item(i);
         std::unique_ptr<PlugIn_Route> route(GetRoute_Plugin(guid));
 
         if (!route) {
@@ -396,10 +396,8 @@ wxString VoyageEtaDialog::FormatEtaLocal(double hours) {
     const long minutes =
         static_cast<long>(std::llround(hours * 60.0));
 
-    wxDateTime etaUtc =
-        wxDateTime::UNow() + wxTimeSpan::Minutes(minutes);
-
-    wxDateTime etaLocal = etaUtc.ToLocalTime();
+    wxDateTime etaLocal =
+        wxDateTime::Now() + wxTimeSpan::Minutes(minutes);
 
     return etaLocal.Format("%d %b %Y %H:%M LT");
 }
