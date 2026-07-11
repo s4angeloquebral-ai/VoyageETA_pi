@@ -46,16 +46,14 @@ jobs:
             throw "msgfmt.exe was not found."
           }
 
-          $gettextBin = $gettextExe.Directory.FullName
-          Write-Host "Gettext folder: $gettextBin"
-          Add-Content -Path $env:GITHUB_PATH -Value $gettextBin
+          Add-Content -Path $env:GITHUB_PATH `
+            -Value $gettextExe.Directory.FullName
 
       - name: Prepare Win32 wxWidgets
         shell: pwsh
         working-directory: buildtree
         run: |
           $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
-
           New-Item -ItemType Directory -Force $wxRoot | Out-Null
 
           $baseUrl = "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.1"
@@ -71,23 +69,12 @@ jobs:
           7z x wx-win32.7z "-o$wxRoot" -y
           7z x wx-headers.7z "-o$wxRoot" -y
 
-          Write-Host "wxWidgets library folders:"
-          Get-ChildItem "$wxRoot\lib" -Directory
-
       - name: Configure
         shell: pwsh
         working-directory: buildtree
         run: |
-          Write-Host "Checking Gettext:"
-          where.exe msgfmt
-          where.exe msgmerge
-
           $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
           $wxLib = "$wxRoot\lib\vc14x_dll"
-
-          if (-not (Test-Path $wxLib)) {
-            throw "Win32 wxWidgets library folder is missing: $wxLib"
-          }
 
           New-Item -ItemType Directory -Force build | Out-Null
 
@@ -105,29 +92,45 @@ jobs:
         run: |
           cmake --build build --config Release --parallel 2
 
-      - name: Package
+      - name: Create importable Voyage ETA package
         shell: pwsh
-        working-directory: buildtree
         run: |
-          cmake --build build --config Release --target package
+          $dll = Get-ChildItem "buildtree\build" `
+            -Recurse `
+            -Filter "testplugin_pi.dll" |
+            Select-Object -First 1
 
-      - name: Collect plugin files
-        shell: pwsh
-        run: |
+          if (-not $dll) {
+            throw "Compiled plugin DLL was not found."
+          }
+
+          New-Item -ItemType Directory -Force package\plugins | Out-Null
+          Copy-Item $dll.FullName "package\plugins\testplugin_pi.dll" -Force
+
+          @'
+<?xml version="1.0" encoding="UTF-8"?>
+<opencpn-plugin>
+  <name>Voyage ETA</name>
+  <version>1.0.0</version>
+  <release>1</release>
+  <summary>ETA to destination or selected route waypoint</summary>
+  <description>Calculates ETA using live SOG or manually entered speed.</description>
+  <author>Captain Voyage ETA</author>
+  <api-version>1.18</api-version>
+  <target>msvc-wx32</target>
+  <target-version>10.0.20348</target-version>
+  <tarball-url>VoyageETA-1.0.0-msvc-wx32.tar.gz</tarball-url>
+  <info-url>https://github.com/s4angeloquebral-ai/VoyageETA_pi</info-url>
+</opencpn-plugin>
+'@ | Set-Content "package\metadata.xml" -Encoding UTF8
+
+          tar -czf VoyageETA-1.0.0-msvc-wx32.tar.gz -C package .
+
           New-Item -ItemType Directory -Force artifacts | Out-Null
+          Copy-Item "VoyageETA-1.0.0-msvc-wx32.tar.gz" artifacts\ -Force
+          Copy-Item $dll.FullName artifacts\ -Force
 
-          Get-ChildItem "buildtree\build" -Recurse |
-            Where-Object {
-              $_.Name -match "\.(tar\.gz|zip|dll)$"
-            } |
-            ForEach-Object {
-              Copy-Item $_.FullName "artifacts\" -Force
-            }
-
-          Write-Host "Collected files:"
-          Get-ChildItem artifacts
-
-      - name: Upload plugin files
+      - name: Upload Voyage ETA
         uses: actions/upload-artifact@v4
         with:
           name: VoyageETA-Windows
