@@ -46,10 +46,8 @@ jobs:
         shell: cmd
         working-directory: buildtree
         run: |
-          call cache\wx-config.bat
           if not exist build mkdir build
-          cmake -S . -B build -A Win32 -DOCPN_TARGET=MSVC -DwxWidgets_ROOT_DIR="%wxWidgets_ROOT_DIR%" -DwxWidgets_LIB_DIR="%wxWidgets_LIB_DIR%"
-
+          cmake -S . -B build -A x64 -DOCPN_TARGET=MSVC -DwxWidgets_ROOT_DIR="%CD%\cache\wxWidgets-3.2.1" -DwxWidgets_LIB_DIR="%CD%\cache\wxWidgets-3.2.1\lib\vc14x_x64_dll" -DwxWidgets_CONFIGURATION=mswu
       - name: Build
         shell: pwsh
         working-directory: buildtree
