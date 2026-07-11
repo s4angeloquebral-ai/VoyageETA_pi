@@ -37,44 +37,53 @@ jobs:
             visualstudio2022-workload-vctools -y --no-progress
 
       - name: Prepare dependencies
-        shell: cmd
+        shell: pwsh
         working-directory: buildtree
         run: |
-          call msvc\win_deps.bat wx32
+          choco install wget 7zip -y --no-progress
+
+          $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
+          New-Item -ItemType Directory -Force $wxRoot | Out-Null
+
+          $baseUrl = "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.1"
+
+          wget -nv --no-check-certificate `
+            "$baseUrl/wxMSW-3.2.1_vc14x_x64_Dev.7z" `
+            -O wx-x64.7z
+
+          wget -nv --no-check-certificate `
+            "$baseUrl/wxWidgets-3.2.1-headers.7z" `
+            -O wx-headers.7z
+
+          7z x wx-x64.7z "-o$wxRoot" -y
+          7z x wx-headers.7z "-o$wxRoot" -y
+
+          Write-Host "wxWidgets folders:"
+          Get-ChildItem "$wxRoot\lib" -Directory
 
       - name: Configure
         shell: pwsh
         working-directory: buildtree
         run: |
-          $wxRoot = (Resolve-Path "cache\wxWidgets-3.2.1").Path
+          $wxRoot = "$PWD\cache\wxWidgets-3.2.1"
+          $wxLib = "$wxRoot\lib\vc14x_x64_dll"
 
-          Write-Host "wxWidgets root:"
-          Write-Host $wxRoot
-
-          Write-Host "Available wxWidgets library folders:"
-          Get-ChildItem "$wxRoot\lib" -Directory | ForEach-Object {
-            Write-Host $_.FullName
+          if (-not (Test-Path $wxRoot)) {
+            throw "wxWidgets root folder is missing: $wxRoot"
           }
 
-          $wxLib = Get-ChildItem "$wxRoot\lib" -Directory |
-            Where-Object {
-              $_.Name -match "x64" -and $_.Name -match "dll"
-            } |
-            Select-Object -First 1
-
-          if (-not $wxLib) {
-            throw "No x64 wxWidgets DLL library folder was found."
+          if (-not (Test-Path $wxLib)) {
+            Write-Host "Folders found under wxWidgets lib:"
+            Get-ChildItem "$wxRoot\lib" -Directory
+            throw "wxWidgets x64 library folder is missing: $wxLib"
           }
-
-          Write-Host "Using wxWidgets library folder:"
-          Write-Host $wxLib.FullName
 
           New-Item -ItemType Directory -Force build | Out-Null
 
           cmake -S . -B build -A x64 `
             -DOCPN_TARGET=MSVC `
             "-DwxWidgets_ROOT_DIR=$wxRoot" `
-            "-DwxWidgets_LIB_DIR=$($wxLib.FullName)" `
+            "-DwxWidgets_LIB_DIR=$wxLib" `
             -DwxWidgets_CONFIGURATION=mswu `
             -DwxWidgets_USE_STATIC=OFF
       - name: Build
