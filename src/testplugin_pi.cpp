@@ -68,7 +68,7 @@ int testplugin_pi::Init() {
 
     return WANTS_TOOLBAR_CALLBACK |
            INSTALLS_TOOLBAR_TOOL |
-           WANTS_POSITION_FIX;
+           WANTS_NMEA_EVENTS;
 }
 
 bool testplugin_pi::DeInit() {
@@ -94,7 +94,7 @@ void testplugin_pi::OnToolbarToolCallback(int) {
     m_dialog->RefreshValues();
 }
 
-void testplugin_pi::SetPositionFix(PlugIn_Position_Fix& pfix) {
+void testplugin_pi::SetPositionFixEx(PlugIn_Position_Fix_Ex& pfix) {
     m_lat = pfix.Lat;
     m_lon = pfix.Lon;
     m_sog = pfix.Sog;
