@@ -107,23 +107,24 @@ jobs:
           New-Item -ItemType Directory -Force package\plugins | Out-Null
           Copy-Item $dll.FullName "package\plugins\testplugin_pi.dll" -Force
 
-          @'
-<?xml version="1.0" encoding="UTF-8"?>
-<opencpn-plugin>
-  <name>Voyage ETA</name>
-  <version>1.0.0</version>
-  <release>1</release>
-  <summary>ETA to destination or selected route waypoint</summary>
-  <description>Calculates ETA using live SOG or manually entered speed.</description>
-  <author>Captain Voyage ETA</author>
-  <api-version>1.18</api-version>
-  <target>msvc-wx32</target>
-  <target-version>10.0.20348</target-version>
-  <tarball-url>VoyageETA-1.0.0-msvc-wx32.tar.gz</tarball-url>
-  <info-url>https://github.com/s4angeloquebral-ai/VoyageETA_pi</info-url>
-</opencpn-plugin>
-'@ | Set-Content "package\metadata.xml" -Encoding UTF8
+          $xml = @(
+          '<?xml version="1.0" encoding="UTF-8"?>'
+          '<opencpn-plugin>'
+          '  <name>Voyage ETA</name>'
+          '  <version>1.0.0</version>'
+          '  <release>1</release>'
+          '  <summary>ETA to destination or selected route waypoint</summary>'
+          '  <description>Calculates ETA using live SOG or manually entered speed.</description>'
+          '  <author>Captain Voyage ETA</author>'
+          '  <api-version>1.18</api-version>'
+          '  <target>msvc-wx32</target>'
+          '  <target-version>10.0.20348</target-version>'
+          '  <tarball-url>VoyageETA-1.0.0-msvc-wx32.tar.gz</tarball-url>'
+          '  <info-url>https://github.com/s4angeloquebral-ai/VoyageETA_pi</info-url>'
+          '</opencpn-plugin>'
+          )
 
+          $xml | Set-Content "package\metadata.xml" -Encoding UTF8
           tar -czf VoyageETA-1.0.0-msvc-wx32.tar.gz -C package .
 
           New-Item -ItemType Directory -Force artifacts | Out-Null
